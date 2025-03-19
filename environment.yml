@@ -1,0 +1,14 @@
+name: statistics
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.10.*
+  - pandas=1.5.*
+  - numpy=1.26.*
+  - matplotlib=3.10.*
+  - ipykernel=6.29.*
+  - ipywidgets=7.8.*
+  - missingno=0.5.*
+  - seaborn=0.13.*
+  - statsmodels
