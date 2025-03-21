@@ -4,7 +4,7 @@ import seaborn as sns
 import matplotlib.colors as mcolors
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
-import scipy.stats as ss
+import scipy.stats as stats
 
 def show_missing_values(df):
     def min_or_nan(col):
@@ -171,9 +171,14 @@ def do_basic_cleaning(df):
 
 def cramers_v(x, y):
     contingency_table = pd.crosstab(x, y)
-    chi2, p, df, expected = ss.chi2_contingency(contingency_table)
+    chi2, p, df, expected = stats.chi2_contingency(contingency_table)
     n = contingency_table.sum().sum()
-    return np.sqrt(chi2 / (n * (min(contingency_table.shape) - 1))).round(2)
+    phi2 = chi2 / n
+    r, k = contingency_table.shape
+    phi2corr = max(0, phi2 - ((k - 1) * (r - 1)) / (n - 1))
+    kcorr = k - ((k - 1) ** 2) / (n - 1)
+    rcorr = r - ((r - 1) ** 2) / (n - 1)
+    return np.sqrt(phi2corr / min((kcorr - 1), (rcorr - 1)))
 
 def group_rare_categories(series, threshold=0.03):
     category_counts = series.value_counts(normalize=True)
@@ -215,15 +220,11 @@ def cramers_v_matrix(df):
                 matrix.loc[col1, col2] = np.nan
     return matrix
 
-def correlation_heatmap(matrix, title=None, cmap='Oranges'):
-
-    num_vars = len(matrix)
-    
+def correlation_heatmap(matrix, title=None, cmap='Oranges', min=None):
+    num_vars = len(matrix)    
     fig_width = max(8, num_vars * 0.6)
-    fig_height = max(6, num_vars * 0.6)
-    
-    plt.figure(figsize=(fig_width, fig_height))
-    
+    fig_height = max(6, num_vars * 0.6)   
+    plt.figure(figsize=(fig_width, fig_height))  
     ax = sns.heatmap(
         matrix, 
         annot=True, 
@@ -234,57 +235,98 @@ def correlation_heatmap(matrix, title=None, cmap='Oranges'):
         annot_kws={"size": max(8, 15 - num_vars * 0.5)},
         cbar_kws={"shrink": 0.5, "aspect": 20},
         square=True,
-        mask=np.triu(np.ones_like(matrix, dtype=bool), k=1)
-    )
-    
+        mask=np.triu(np.ones_like(matrix, dtype=bool), k=1),
+        vmin=min
+    )  
     plt.title(title, fontsize=16)
     plt.xticks(rotation=45, ha='right', fontsize=10)
     plt.yticks(fontsize=10)
-
     ax.set_facecolor('white')
-
     return ax
 
 def cat_corr_heatmap(matrix):
-    accessible_orange = '#CF4B00'
-    healthy_orange = '#EC6602'
-    healthy_orange_50 = '#F9B591'
-    healthy_orange_25 = '#FDDDCB'
-    neutral_cream = '#FFF4E6'
-
-    custom_cmap = LinearSegmentedColormap.from_list(
-        None, 
-        [neutral_cream, healthy_orange_25, healthy_orange, accessible_orange],
-        N=256
-    )
-
-    ax = correlation_heatmap(matrix, title="Cramers V", cmap=custom_cmap)
-
+    # accessible_orange = '#CF4B00'
+    # healthy_orange = '#EC6602'
+    # healthy_orange_50 = '#F9B591'
+    # healthy_orange_25 = '#FDDDCB'
+    # neutral_cream = '#FFF4E6'
+    # custom_cmap = LinearSegmentedColormap.from_list(
+    #     None, 
+    #     [neutral_cream, healthy_orange_25, healthy_orange, accessible_orange],
+    #     N=256
+    # )
+    ax = correlation_heatmap(matrix, title="Cramers V", cmap='Blues', min=0)
     cbar = ax.collections[0].colorbar
     cbar.set_ticks([0, 0.5, 1])
     cbar.set_ticklabels(["0", "0.5", "1"])
-
     plt.show()
 
 def num_corr_heatmap(matrix):
-    accessible_orange = '#CF4B00'
-    healthy_orange = '#EC6602'
-    healthy_orange_50 = '#F9B591'
-    healthy_orange_25 = '#FDDDCB'
-    neutral_cream = '#FFF4E6'
-    siemens_petrol_25 = '#C8E6E6'
-    siemens_petrol_50 = '#87D2D2'
-    siemens_petrol = '#009999'
-    sh_black_10 = '#E6E6E6'
-    custom_cmap = LinearSegmentedColormap.from_list(
-        None, 
-        [siemens_petrol, siemens_petrol_50, siemens_petrol_25, sh_black_10, healthy_orange_25, healthy_orange_50, healthy_orange],
-        N=256
-    )
-    ax = correlation_heatmap(matrix, title="Pearson", cmap=custom_cmap)
-
+    # accessible_orange = '#CF4B00'
+    # healthy_orange = '#EC6602'
+    # healthy_orange_50 = '#F9B591'
+    # healthy_orange_25 = '#FDDDCB'
+    # neutral_cream = '#FFF4E6'
+    # siemens_petrol_25 = '#C8E6E6'
+    # siemens_petrol_50 = '#87D2D2'
+    # siemens_petrol = '#009999'
+    # sh_black_10 = '#E6E6E6'
+    # custom_cmap = LinearSegmentedColormap.from_list(
+    #     None, 
+    #     [siemens_petrol, siemens_petrol_50, siemens_petrol_25, sh_black_10, healthy_orange_25, healthy_orange_50, healthy_orange],
+    #     N=256
+    # )
+    ax = correlation_heatmap(matrix, title="Pearson", cmap='coolwarm', min=-1)
     cbar = ax.collections[0].colorbar
     cbar.set_ticks([-1, 0, 1])
     cbar.set_ticklabels(["-1", "0", "1"])
-
     plt.show()
+
+def plot_bar(df, with_col, num_cols, hue=None, title=None):
+    """
+    Mean bar plot for a single categorical column against all numerical columns.
+    """
+    ncols = 5
+    nrows = (len(num_cols) + ncols - 1) // ncols
+
+    fig, axes = plt.subplots(nrows, ncols, figsize=(15, 3.5 * nrows))
+
+    axes = axes.flatten()
+
+    for i, col in enumerate(num_cols):
+        sns.barplot(x=with_col, y=col, data=df, errorbar='sd', ax=axes[i], estimator='mean', hue=hue)
+    if title:
+        fig.suptitle(title)
+    else:
+        fig.suptitle(f'Mean by {with_col}')
+
+    plt.tight_layout()
+    plt.show()
+
+def check_normality(series):
+    """
+    Check normality of a series using four different tests along with a Q-Q plot and a histogram.
+    """
+    _, ax = plt.subplots(1, 2, figsize=(12, 6))
+    stats.probplot(series, plot=ax[0], rvalue=True);
+    sns.histplot(series, bins=30, kde=True, ax=ax[1]);
+    plt.show()
+    _, p = stats.shapiro(series)
+    print(f"Shapiro-Wilk normality test: p-value = {p}")
+    _, p = stats.normaltest(series)
+    print(f"D'Agostino's K^2 normality test: p-value = {p}")
+    _, p = stats.kstest((series - series.mean()) / series.std(), 'norm')
+    print(f"Kolmogorov-Smirnov normality test: p-value = {p}")
+    anderson = stats.anderson(series)
+    print(f"Anderson-Darling normality test: statistic = {anderson.statistic}, critical value = {anderson.critical_values[2]}")
+
+def check_homogeneity(df, groupby, column):
+    sns.boxplot(data=df, x=groupby, y=column)
+    plt.show()
+    cats = [df[df[groupby] == cat][column] for cat in df[groupby].unique()]
+    levene = stats.levene(*cats, center='mean')
+    print(f"Levene test statistic: {levene.statistic}, p-value = {levene.pvalue}")
+    brown_forsythe = stats.levene(*cats, center='median')
+    print(f"Brown-Forsythe test statistic: {brown_forsythe.statistic}, p-value = {brown_forsythe.pvalue}")
+    bartlett = stats.bartlett(*cats)
+    print(f"Bartlett test statistic: {bartlett.statistic}, p-value = {bartlett.pvalue}")
