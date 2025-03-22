@@ -282,7 +282,7 @@ def num_corr_heatmap(matrix):
     cbar.set_ticklabels(["-1", "0", "1"])
     plt.show()
 
-def plot_bar(df, with_col, num_cols, hue=None, title=None):
+def plot_bar_against(df, with_col, num_cols, hue=None, title=None):
     """
     Mean bar plot for a single categorical column against all numerical columns.
     """
@@ -330,3 +330,43 @@ def check_homogeneity(df, groupby, column):
     print(f"Brown-Forsythe test statistic: {brown_forsythe.statistic}, p-value = {brown_forsythe.pvalue}")
     bartlett = stats.bartlett(*cats)
     print(f"Bartlett test statistic: {bartlett.statistic}, p-value = {bartlett.pvalue}")
+
+def plot_strip_against(df, with_col, num_cols, hue=None, title=None):
+    """
+    Strip plot for a single categorical column against all numerical columns.
+    """
+    ncols = 5
+    nrows = (len(num_cols) + ncols - 1) // ncols
+
+    fig, axes = plt.subplots(nrows, ncols, figsize=(15, 3.5 * nrows))
+
+    axes = axes.flatten()
+
+    for i, col in enumerate(num_cols):
+        ax = axes[i]
+        sns.stripplot(x=with_col, y=col, data=df, ax=ax, hue=hue, alpha=0.8, dodge=True)
+        ax.legend_.remove()
+    if title:
+        fig.suptitle(title)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+def plot_line_against(df, with_col, num_cols, title=None):
+    """
+    Line plot for a single categorical column against all numerical columns.
+    """
+    ncols = 5
+    nrows = (len(num_cols) + ncols - 1) // ncols
+
+    fig, axes = plt.subplots(nrows, ncols, figsize=(15, 3.5 * nrows))
+
+    axes = axes.flatten()
+
+    for i, col in enumerate(num_cols):
+        ax = axes[i]
+        sns.lineplot(x=with_col, y=col, data=df, ax=ax, errorbar='sd')
+    if title:
+        fig.suptitle(title)
+    plt.tight_layout()
+    plt.show()
