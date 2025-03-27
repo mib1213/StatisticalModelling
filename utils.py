@@ -370,3 +370,24 @@ def plot_line_against(df, with_col, num_cols, title=None):
         fig.suptitle(title)
     plt.tight_layout()
     plt.show()
+
+def plot_point_against(df, with_col, num_cols, hue=None, title=None):
+    """
+    Point plot for a single categorical column against all numerical columns.
+    """
+    ncols = 5
+    nrows = (len(num_cols) + ncols - 1) // ncols
+
+    fig, axes = plt.subplots(nrows, ncols, figsize=(15, 3.5 * nrows))
+
+    axes = axes.flatten()
+
+    for i, col in enumerate(num_cols):
+        ax = axes[i]
+        sns.pointplot(x=with_col, y=col, data=df, ax=ax, errorbar='sd', hue=hue)
+        if i != 0:
+            ax.legend_.remove()
+    if title:
+        fig.suptitle(title)
+    plt.tight_layout()
+    plt.show()
