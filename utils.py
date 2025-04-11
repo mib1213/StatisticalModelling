@@ -9,11 +9,11 @@ import scipy.stats as stats
 def show_missing_values(df):
     def min_or_nan(col):
         if pd.api.types.is_numeric_dtype(df[col]) and not pd.api.types.is_bool_dtype(df[col]):
-            return str(df[col].min().round(2))
+            return str(round(df[col].min(), 2))
         return np.nan
     def max_or_nan(col):
         if pd.api.types.is_numeric_dtype(df[col]) and not pd.api.types.is_bool_dtype(df[col]):
-            return str(df[col].max().round(2))
+            return str(round(df[col].max(), 2))
         return np.nan
 
     missing_df = pd.DataFrame({
