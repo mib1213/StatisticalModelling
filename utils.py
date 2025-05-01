@@ -5,6 +5,7 @@ import matplotlib.colors as mcolors
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 import scipy.stats as stats
+from statsmodels.tools import add_constant
 
 def show_missing_values(df):
     def min_or_nan(col):
@@ -309,7 +310,9 @@ def check_normality(series):
     """
     _, ax = plt.subplots(1, 2, figsize=(12, 6))
     stats.probplot(series, plot=ax[0], rvalue=True);
+    ax[0].set_title('Q-Q Plot')
     sns.histplot(series, bins=30, kde=True, ax=ax[1]);
+    ax[1].set_title('Histogram with KDE')
     plt.show()
     _, p = stats.shapiro(series)
     print(f"Shapiro-Wilk normality test: p-value = {p}")
@@ -389,5 +392,30 @@ def plot_point_against(df, with_col, num_cols, hue=None, title=None):
             ax.legend_.remove()
     if title:
         fig.suptitle(title)
+    plt.tight_layout()
+    plt.show()
+
+def plot_regression_results(X, y, results):
+    
+    fig, ax = plt.subplots(1, 3, figsize=(18, 6))
+
+    # Plot 1: Regression plot
+    sns.regplot(x=X, y=y, ax=ax[0])
+    ax[0].set_title("Regression Plot")
+
+    # Plot 2: Residuals
+    sns.residplot(x=X, y=y, lowess=True, ax=ax[1])
+    ax[1].set_title("Residuals Plot")
+    ax[1].set_ylabel("Residuals")
+
+    # Plot 3: Predicted vs Actual
+    y_pred = results.predict(add_constant(X))
+    sns.scatterplot(x=y, y=y_pred, ax=ax[2])
+    lims = [min(y.min(), y_pred.min()), max(y.max(), y_pred.max())]
+    ax[2].plot(lims, lims, '--', color='b')  # Reference line
+    ax[2].set_title("Predicted vs Actual")
+    ax[2].set_xlabel("Actual")
+    ax[2].set_ylabel("Predicted")
+
     plt.tight_layout()
     plt.show()
