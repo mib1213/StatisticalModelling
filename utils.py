@@ -315,13 +315,13 @@ def check_normality(series):
     ax[1].set_title('Histogram with KDE')
     plt.show()
     _, p = stats.shapiro(series)
-    print(f"Shapiro-Wilk normality test: p-value = {p}")
+    print(f"Shapiro-Wilk normality test: p-value = {p:.4f}")
     _, p = stats.normaltest(series)
-    print(f"D'Agostino's K^2 normality test: p-value = {p}")
+    print(f"D'Agostino's K^2 normality test: p-value = {p:.4f}")
     _, p = stats.kstest((series - series.mean()) / series.std(), 'norm')
-    print(f"Kolmogorov-Smirnov normality test: p-value = {p}")
+    print(f"Kolmogorov-Smirnov normality test: p-value = {p:.4f}")
     anderson = stats.anderson(series)
-    print(f"Anderson-Darling normality test: statistic = {anderson.statistic}, critical value = {anderson.critical_values[2]}")
+    print(f"Anderson-Darling normality test: statistic = {anderson.statistic:.4f}, critical value = {anderson.critical_values[2]:.4f}")
 
 def check_homogeneity(df, groupby, column):
     sns.boxplot(data=df, x=groupby, y=column)
@@ -419,3 +419,63 @@ def plot_regression_results(X, y, results):
 
     plt.tight_layout()
     plt.show()
+    
+def check_homoscedasticity(model):
+    from statsmodels.stats.outliers_influence import OLSInfluence
+    from statsmodels.stats.diagnostic import (
+        het_breuschpagan,
+        het_arch,
+        het_white,
+        het_goldfeldquandt
+    )
+
+    # Standardisierte Residuen
+    influence = OLSInfluence(model)
+    standardized_resid = influence.resid_studentized_internal
+
+    # Zwei Plots nebeneinander
+    fig, ax = plt.subplots(1, 2, figsize=(12, 5))
+
+    # 1. Residuals vs Fitted (standardisiert)
+    sns.residplot(x=model.fittedvalues, y=standardized_resid, lowess=True, ax=ax[0])
+    ax[0].set_xlabel('Fitted values')
+    ax[0].set_ylabel('Standardized Residuals')
+    ax[0].set_title('Residuals vs Fitted Values')
+
+    # 2. Scale-Location Plot
+    sns.residplot(x=model.fittedvalues, y=np.sqrt(np.abs(standardized_resid)), lowess=True, ax=ax[1])
+    ax[1].set_xlabel('Fitted values')
+    ax[1].set_ylabel('√|Standardized Residuals|')
+    ax[1].set_title('Scale-Location Plot')
+
+    plt.tight_layout()
+    plt.show()
+
+    # Breusch-Pagan-Test
+    bp_test = het_breuschpagan(model.resid, model.model.exog)
+    print(f'Breusch-Pagan test statistic: p-value = {bp_test[1]:.4f}')
+    print(f'F-statistic: p-value = {bp_test[3]:.4f}')
+
+    # ARCH-Test
+    arch_test = het_arch(model.resid)
+    print(f'ARCH test statistic: p-value = {arch_test[1]:.4f}')
+    print(f'F-statistic: p-value = {arch_test[3]:.4f}')
+
+    # White-Test
+    white_test = het_white(model.resid, model.model.exog)
+    print(f'White test statistic: p-value = {white_test[1]:.4f}')
+    print(f'F-statistic: p-value = {white_test[3]:.4f}')
+
+    # Goldfeld-Quandt-Test
+    gq_test = het_goldfeldquandt(model.resid, model.model.exog)
+    print(f'Goldfeld-Quandt test statistic: p-value = {gq_test[1]:.4f}')
+
+    return {
+        'breusch_pagan_p': bp_test[1],
+        'breusch_pagan_f_p': bp_test[3],
+        'arch_p': arch_test[1],
+        'arch_f_p': arch_test[3],
+        'white_p': white_test[1],
+        'white_f_p': white_test[3],
+        'goldfeld_quandt_p': gq_test[1]
+    }
